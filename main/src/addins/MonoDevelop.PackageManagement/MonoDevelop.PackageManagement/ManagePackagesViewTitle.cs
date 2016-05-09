@@ -26,11 +26,11 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+using MonoDevelop.Core;
 
 namespace MonoDevelop.PackageManagement
 {
-	public class ManagePackagesViewTitle
+	internal class ManagePackagesViewTitle
 	{
 		public ManagePackagesViewTitle(IPackageManagementSolution solution)
 		{
@@ -41,7 +41,7 @@ namespace MonoDevelop.PackageManagement
 		{
 			var selectedProjects = new PackageManagementSelectedProjects(solution);
 			string selectionName = selectedProjects.SelectionName;
-			Title = String.Format("{0} - Manage Packages", selectionName);
+			Title = GettextCatalog.GetString ("{0} - Manage Packages", selectionName);
 		}
 		
 		public string Title { get; private set; }

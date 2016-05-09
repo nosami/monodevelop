@@ -378,6 +378,7 @@ namespace MonoDevelop.Projects
 			foreach (var projectFile in projectFiles) {
 				var info = new FileInfo (projectFile.FilePath);
 				infoList.Add (info);
+				info.Refresh ();
 			}
 
 			return infoList;
@@ -2744,7 +2745,7 @@ namespace MonoDevelop.Projects
 			var include = GetPrefixedInclude (pathPrefix, item.UnevaluatedInclude ?? item.Include);
 
 			MSBuildItem buildItem;
-			if (item.BackingItem != null && item.BackingItem.Name == item.ItemName) {
+			if (item.BackingItem?.ParentObject != null && item.BackingItem.Name == item.ItemName) {
 				buildItem = item.BackingItem;
 			} else {
 				buildItem = msproject.AddNewItem (item.ItemName, include);

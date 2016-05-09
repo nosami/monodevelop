@@ -969,11 +969,7 @@ namespace Mono.TextEditor
 		internal void BeginAtomicUndo (OperationType operationType = OperationType.Undefined)
 		{
 			currentAtomicUndoOperationType.Push (operationType);
-			if (atomicUndoLevel == 0) {
-				if (this.syntaxMode != null && !SuppressHighlightUpdate)
-					Mono.TextEditor.Highlighting.SyntaxModeService.WaitUpdate (this);
-			}
-			if (currentAtomicOperation == null) {
+ 			if (currentAtomicOperation == null) {
 				Debug.Assert (atomicUndoLevel == 0); 
 				currentAtomicOperation = new AtomicUndoOperation (operationType);
 				OnBeginUndo ();
@@ -1064,6 +1060,7 @@ namespace Mono.TextEditor
 		readonly object syncObject = new object();
 
 		CancellationTokenSource foldSegmentSrc;
+		object foldSegmentTaskLock = new object ();
 		Task foldSegmentTask;
 
 		public void UpdateFoldSegments (List<FoldSegment> newSegments, bool startTask = false, bool useApplicationInvoke = false, CancellationToken masterToken = default(CancellationToken))
@@ -1071,38 +1068,39 @@ namespace Mono.TextEditor
 			if (newSegments == null) {
 				return;
 			}
-
-			InterruptFoldWorker ();
-			bool update;
-			if (!startTask) {
-				var newFoldedSegments = UpdateFoldSegmentWorker (newSegments, out update);
-				if (useApplicationInvoke) {
-					Gtk.Application.Invoke (delegate {
+			lock (foldSegmentTaskLock) {
+				InterruptFoldWorker ();
+				bool update;
+				if (!startTask) {
+					var newFoldedSegments = UpdateFoldSegmentWorker (newSegments, out update);
+					if (useApplicationInvoke) {
+						Gtk.Application.Invoke (delegate {
+							foldedSegments = newFoldedSegments;
+							InformFoldTreeUpdated ();
+						});
+					} else {
 						foldedSegments = newFoldedSegments;
 						InformFoldTreeUpdated ();
-					});
-				} else {
-					foldedSegments = newFoldedSegments;
-					InformFoldTreeUpdated ();
-				}
-				return;
-			}
-			foldSegmentSrc = new CancellationTokenSource ();
-			masterToken.Register (InterruptFoldWorker); 
-			var token = foldSegmentSrc.Token;
-			foldSegmentTask = Task.Factory.StartNew (delegate {
-				var segments = UpdateFoldSegmentWorker (newSegments, out update, token);
-				if (token.IsCancellationRequested)
+					}
 					return;
-				Gtk.Application.Invoke (delegate {
+				}
+				foldSegmentSrc = new CancellationTokenSource ();
+				masterToken.Register (InterruptFoldWorker);
+				var token = foldSegmentSrc.Token;
+				foldSegmentTask = Task.Factory.StartNew (delegate {
+					var segments = UpdateFoldSegmentWorker (newSegments, out update, token);
 					if (token.IsCancellationRequested)
 						return;
 					foldedSegments = segments;
-					InformFoldTreeUpdated ();
-					if (update)
-						CommitUpdateAll ();
-				});
-			}, token);
+					Gtk.Application.Invoke (delegate {
+						if (token.IsCancellationRequested)
+							return;
+						InformFoldTreeUpdated ();
+						if (update)
+							CommitUpdateAll ();
+					});
+				}, token);
+			}
 		}
 		
 		void RemoveFolding (FoldSegment folding)
@@ -1184,7 +1182,13 @@ namespace Mono.TextEditor
 		public void WaitForFoldUpdateFinished ()
 		{
 			if (foldSegmentTask != null) {
-				foldSegmentTask.Wait (5000);
+				try {
+					foldSegmentTask.Wait (5000);
+				} catch (AggregateException e) {
+					e.Flatten ().Handle (x => x is OperationCanceledException);
+				} catch (OperationCanceledException) {
+					
+				}
 				foldSegmentTask = null;
 			}
 		}
@@ -1273,27 +1277,15 @@ namespace Mono.TextEditor
 		
 		public void EnsureOffsetIsUnfolded (int offset)
 		{
-			bool needUpdate = false;
 			foreach (FoldSegment fold in GetFoldingsFromOffset (offset).Where (f => f.IsFolded && f.Offset < offset && offset < f.EndOffset)) {
-				needUpdate = true;
 				fold.IsFolded = false;
-			}
-			if (needUpdate) {
-				RequestUpdate (new UpdateAll ());
-				CommitDocumentUpdate ();
 			}
 		}
 
 		public void EnsureSegmentIsUnfolded (int offset, int length)
 		{
-			bool needUpdate = false;
 			foreach (var fold in GetFoldingContaining (offset, length).Where (f => f.IsFolded)) {
-				needUpdate = true;
 				fold.IsFolded = false;
-			}
-			if (needUpdate) {
-				RequestUpdate (new UpdateAll ());
-				CommitDocumentUpdate ();
 			}
 		}
 
@@ -1306,12 +1298,29 @@ namespace Mono.TextEditor
 		public event EventHandler FoldTreeUpdated;
 		
 		HashSet<FoldSegment> foldedSegments = new HashSet<FoldSegment> ();
+
 		public IEnumerable<FoldSegment> FoldedSegments {
 			get {
 				return foldedSegments;
 			}
 		}
+
 		internal void InformFoldChanged (FoldSegmentEventArgs args)
+		{
+			lock (foldSegmentTaskLock) {
+				if (foldSegmentTask != null) {
+					foldSegmentTask.ContinueWith (delegate {
+						Gtk.Application.Invoke (delegate {
+							InternalInformFoldChanged (args);	
+						});
+					});
+				} else {
+					InternalInformFoldChanged (args);
+				}
+			}
+		}
+
+		void InternalInformFoldChanged (FoldSegmentEventArgs args)
 		{
 			if (args.FoldSegment.IsFolded) {
 				foldedSegments.Add (args.FoldSegment);
@@ -1322,7 +1331,7 @@ namespace Mono.TextEditor
 			if (handler != null)
 				handler (this, args);
 		}
-		
+
 		public event EventHandler<FoldSegmentEventArgs> Folded;
 		#endregion
 
@@ -1362,7 +1371,7 @@ namespace Mono.TextEditor
 			AddMarker (line, marker, true);
 		}
 
-		public void AddMarker (DocumentLine line, TextLineMarker marker, bool commitUpdate)
+		public void AddMarker (DocumentLine line, TextLineMarker marker, bool commitUpdate, int idx = -1)
 		{
 			if (line == null || marker == null)
 				return;
@@ -1373,7 +1382,7 @@ namespace Mono.TextEditor
 					extendingTextMarkers.Sort (CompareMarkers);
 				}
 			}
-			line.AddMarker (marker);
+			line.AddMarker (marker, idx);
 			OnMarkerAdded (new TextMarkerEvent (line, marker));
 			if (commitUpdate)
 				this.CommitLineUpdate (line);

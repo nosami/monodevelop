@@ -28,11 +28,12 @@
 
 using System;
 using System.Collections.Generic;
+using MonoDevelop.Core;
 using NuGet;
 
 namespace MonoDevelop.PackageManagement
 {
-	public class UpdatePackageAction : ProcessPackageOperationsAction, IUpdatePackageSettings
+	internal class UpdatePackageAction : ProcessPackageOperationsAction, IUpdatePackageSettings
 	{
 		IFileRemover fileRemover;
 
@@ -116,12 +117,12 @@ namespace MonoDevelop.PackageManagement
 
 		void LogNoUpdatesAvailableForPackage (string packageId)
 		{
-			string message = String.Format ("No updates available for '{0}' in project '{1}'.", packageId, Project.Name);
+			string message = GettextCatalog.GetString ("No updates available for '{0}' in project '{1}'.", packageId, Project.Name);
 			Logger.Log (MessageLevel.Info, message);
 		}
 
 		protected override string StartingMessageFormat {
-			get { return "Updating {0}..."; }
+			get { return GettextCatalog.GetString ("Updating {0}..."); }
 		}
 
 		protected override bool ShouldLogEmptyLineForFinishedAction ()

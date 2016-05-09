@@ -219,6 +219,8 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 		public void BeginProgress ()
 		{
 			oldFraction = 0.0;
+			progressLayer.RemoveAllAnimations ();
+
 			progressLayer.Hidden = false;
 			progressLayer.Opacity = 1;
 			progressLayer.Frame = new CGRect (0, 0, 0, barHeight);
@@ -273,8 +275,13 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 		void AttachFadeoutAnimation (CALayer progress, CAAnimation animation, Func<bool> fadeoutVerifier)
 		{
 			animation.AnimationStopped += (sender, e) => {
-				if (!fadeoutVerifier ())
+				if (!fadeoutVerifier ()) {
 					return;
+				}
+
+				if (!e.Finished) {
+					return;
+				}
 
 				CABasicAnimation fadeout = CABasicAnimation.FromKeyPath ("opacity");
 				fadeout.From = NSNumber.FromDouble (1);
@@ -286,9 +293,17 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 					if (!e2.Finished)
 						return;
 
+					// Reset all the properties.
 					inProgress = false;
-					progress.Opacity = 0;
+
+					progress.Hidden = true;
+
+					progress.Opacity = 1;
+					progress.Frame = new CGRect (0, 0, 0, barHeight);
 					progress.RemoveAllAnimations ();
+					oldFraction = 0.0;
+
+					progress.Hidden = false;
 				};
 				progress.Name = ProgressLayerFadingId;
 				progress.AddAnimation (fadeout, "opacity");
@@ -337,8 +352,6 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 		const string ProgressLayerFadingId = "ProgressLayerFading";
 		const string growthAnimationKey = "bounds";
 		StatusBarContextHandler ctxHandler;
-		Stack<double> progressMarks = new Stack<double> ();
-		bool currentTextIsMarkup;
 		string text;
 		MessageType messageType;
 		NSColor textColor;
@@ -398,7 +411,7 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 
 			textField.Cell = new VerticallyCenteredTextFieldCell (0f);
 			textField.Cell.StringValue = "";
-			textField.Cell.PlaceholderAttributedString = GetStatusString (BrandingService.ApplicationName, ColorForType (MessageType.Ready));
+			UpdateApplicationNamePlaceholderText ();
 
 			// The rect is empty because we use InVisibleRect to track the whole of the view.
 			textFieldArea = new NSTrackingArea (CGRect.Empty, NSTrackingAreaOptions.MouseEnteredAndExited | NSTrackingAreaOptions.ActiveInKeyWindow | NSTrackingAreaOptions.InVisibleRect, this, null);
@@ -437,6 +450,7 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 
 			TaskService.Errors.TasksAdded += updateHandler;
 			TaskService.Errors.TasksRemoved += updateHandler;
+			BrandingService.ApplicationNameChanged += ApplicationNameChanged;
 
 			AddSubview (buildResults);
 			AddSubview (imageView);
@@ -444,6 +458,16 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 
 			progressView = new ProgressView ();
 			AddSubview (progressView);
+		}
+
+		void UpdateApplicationNamePlaceholderText ()
+		{
+			textField.Cell.PlaceholderAttributedString = GetStatusString (BrandingService.ApplicationLongName, ColorForType (MessageType.Ready));
+		}
+
+		void ApplicationNameChanged (object sender, EventArgs e)
+		{
+			UpdateApplicationNamePlaceholderText ();
 		}
 
 		public override void DidChangeBackingProperties ()
@@ -455,13 +479,13 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 
 		void LoadStyles (object sender = null, EventArgs args = null)
 		{
-			if (IdeApp.Preferences.UserInterfaceSkin == Skin.Dark) {
+			if (IdeApp.Preferences.UserInterfaceTheme == Theme.Dark) {
 				Appearance = NSAppearance.GetAppearance (NSAppearance.NameVibrantDark);
 			} else {
 				Appearance = NSAppearance.GetAppearance (NSAppearance.NameAqua);
 			}
 
-			textField.Cell.PlaceholderAttributedString = GetStatusString (BrandingService.ApplicationName, ColorForType (MessageType.Ready));
+			UpdateApplicationNamePlaceholderText ();
 			textColor = ColorForType (messageType);
 			ReconstructString ();
 		}
@@ -471,6 +495,7 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 			TaskService.Errors.TasksAdded -= updateHandler;
 			TaskService.Errors.TasksRemoved -= updateHandler;
 			Ide.Gui.Styles.Changed -= LoadStyles;
+			BrandingService.ApplicationNameChanged -= ApplicationNameChanged;
 			base.Dispose (disposing);
 		}
 
@@ -503,7 +528,7 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 		{
 			if (string.IsNullOrEmpty (text)) {
 				textField.AttributedStringValue = new NSAttributedString ("");
-				textField.Cell.PlaceholderAttributedString = GetStatusString (BrandingService.ApplicationName, ColorForType (MessageType.Ready));
+				UpdateApplicationNamePlaceholderText ();
 				imageView.Image = ImageService.GetIcon (Stock.StatusSteady).ToNSImage ();
 			} else {
 				textField.AttributedStringValue = GetStatusString (text, textColor);
@@ -599,6 +624,7 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 		public void ShowReady ()
 		{
 			ShowMessage (null, "", false, MessageType.Ready);
+			SetMessageSourcePad (null);
 		}
 
 		static Pad sourcePad;
@@ -657,7 +683,6 @@ namespace MonoDevelop.MacIntegration.MainToolbar
 				return false;
 
 			text = message;
-			currentTextIsMarkup = isMarkup;
 			messageType = statusType;
 			textColor = ColorForType (statusType);
 

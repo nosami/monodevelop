@@ -33,7 +33,7 @@ using MonoDevelop.Core;
 
 namespace MonoDevelop.PackageManagement
 {
-	public class RestorePackagesAction : IPackageAction
+	internal class RestorePackagesAction : IPackageAction
 	{
 		IPackageManagementSolution solution;
 		IPackageManagementEvents packageManagementEvents;
@@ -107,7 +107,7 @@ namespace MonoDevelop.PackageManagement
 		void LogResult (int totalPackageReferences, int packagesRestored)
 		{
 			if (packagesRestored == 0) {
-				Log ("All packages are already restored.");
+				Log (GettextCatalog.GetString ("All packages are already restored."));
 			} else if (packagesRestored == 1) {
 				Log (GettextCatalog.GetString ("1 package restored successfully."));
 			} else if (packagesRestored > 0) {

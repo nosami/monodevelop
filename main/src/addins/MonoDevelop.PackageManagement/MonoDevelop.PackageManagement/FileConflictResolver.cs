@@ -26,16 +26,16 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
+using MonoDevelop.Core;
 using MonoDevelop.Ide;
 using NuGet;
 
 namespace MonoDevelop.PackageManagement
 {
-	public class FileConflictResolver : IFileConflictResolver
+	internal class FileConflictResolver : IFileConflictResolver
 	{
-		static AlertButton YesToAllButton = new AlertButton ("Yes to All");
-		static AlertButton NoToAllButton = new AlertButton ("No to All");
+		static AlertButton YesToAllButton = new AlertButton (GettextCatalog.GetString ("Yes to All"));
+		static AlertButton NoToAllButton = new AlertButton (GettextCatalog.GetString ("No to All"));
 		
 		AlertButton[] buttons = new AlertButton[] {
 			AlertButton.Yes,
@@ -52,7 +52,7 @@ namespace MonoDevelop.PackageManagement
 		public FileConflictResolution ResolveFileConflict(string message)
 		{
 			AlertButton result = MessageService.AskQuestion(
-				"File Conflict",
+				GettextCatalog.GetString ("File Conflict"),
 				message,
 				NoButtonIndex, // "No" is default accept button.
 				buttons);

@@ -26,13 +26,11 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System;
-using System.IO;
-using NuGet;
+using MonoDevelop.Core;
 
 namespace MonoDevelop.PackageManagement
 {
-	public class UninstallPackageAction : ProcessPackageAction
+	internal class UninstallPackageAction : ProcessPackageAction
 	{
 		public UninstallPackageAction(
 			IPackageManagementProject project,
@@ -64,7 +62,7 @@ namespace MonoDevelop.PackageManagement
 		}
 
 		protected override string StartingMessageFormat {
-			get { return "Removing {0}..."; }
+			get { return GettextCatalog.GetString ("Removing {0}..."); }
 		}
 	}
 }

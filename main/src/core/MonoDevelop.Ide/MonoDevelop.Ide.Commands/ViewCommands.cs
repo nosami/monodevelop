@@ -57,7 +57,6 @@ namespace MonoDevelop.Ide.Commands
 		ZoomOut,
 		ZoomReset,
 		FocusCurrentDocument,
-		CenterAndFocusCurrentDocument,
 		ShowWelcomePage
 	}
 
@@ -370,7 +369,7 @@ namespace MonoDevelop.Ide.Commands
 			window.MoveToPreviousNotebook ();
 		}
 	}
-
+	
 	public class FocusCurrentDocumentHandler : CommandHandler
 	{
 		protected override void Update (CommandInfo info)
@@ -383,19 +382,5 @@ namespace MonoDevelop.Ide.Commands
 			IdeApp.Workbench.ActiveDocument.Editor.StartCaretPulseAnimation ();
 		}
 
-	}
-
-	public class CenterAndFocusCurrentDocumentHandler : CommandHandler
-	{
-		protected override void Update (CommandInfo info)
-		{
-			info.Enabled = IdeApp.Workbench.ActiveDocument != null && IdeApp.Workbench.ActiveDocument.Editor != null;
-		}
-
-		protected override void Run ()
-		{
-			IdeApp.Workbench.ActiveDocument.Editor.CenterToCaret ();
-			IdeApp.Workbench.ActiveDocument.Editor.StartCaretPulseAnimation ();
-		}
 	}
 }

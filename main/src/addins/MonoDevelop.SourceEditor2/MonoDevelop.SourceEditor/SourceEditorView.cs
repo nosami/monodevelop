@@ -266,7 +266,7 @@ namespace MonoDevelop.SourceEditor
 			}
 			var handler = LineChanged;
 			if (handler != null)
-				handler (this, new MonoDevelop.Ide.Editor.LineEventArgs (new DocumentLineWrapper (e.Line)));
+				handler (this, new MonoDevelop.Ide.Editor.LineEventArgs (e.Line));
 		}
 
 		void HandleTextReplaced (object sender, DocumentChangeEventArgs args)
@@ -1502,7 +1502,7 @@ namespace MonoDevelop.SourceEditor
 				TextEditor.DeleteSelectedText ();
 				var offset = TextEditor.Caret.Offset;
 				int length = TextEditor.Insert (offset, value);
-				TextEditor.SelectionRange = new Mono.TextEditor.TextSegment (offset, length);
+				TextEditor.SelectionRange = new TextSegment (offset, length);
 			}
 		}
 
@@ -2626,7 +2626,7 @@ namespace MonoDevelop.SourceEditor
 					};
 				}
 				foreach (var segment in link.Links) {
-					convertedLink.AddLink (new Mono.TextEditor.TextSegment (segment.Offset, segment.Length)); 
+					convertedLink.AddLink (new TextSegment (segment.Offset, segment.Length)); 
 				}
 				convertedLinks.Add (convertedLink); 
 			}
@@ -2668,7 +2668,7 @@ namespace MonoDevelop.SourceEditor
 		{
 			var debugPair = lineMarker as DebugMarkerPair;
 			if (debugPair != null) {
-				debugPair.AddTo (TextEditor.Document, ((DocumentLineWrapper)line).Line);
+				debugPair.AddTo (TextEditor.Document, (DocumentLine)line);
 				return;
 			}
 			var textLineMarker = lineMarker as TextLineMarker;
@@ -2682,7 +2682,7 @@ namespace MonoDevelop.SourceEditor
 				}
 			}
 
-			TextEditor.Document.AddMarker (((DocumentLineWrapper)line).Line, textLineMarker);
+			TextEditor.Document.AddMarker ((DocumentLine)line, textLineMarker);
 		}
 
 		void ITextEditorImpl.RemoveMarker (ITextLineMarker lineMarker)
@@ -2700,12 +2700,12 @@ namespace MonoDevelop.SourceEditor
 
 		IEnumerable<ITextLineMarker> ITextEditorImpl.GetLineMarkers (IDocumentLine line)
 		{
-			return ((DocumentLineWrapper)line).Line.Markers.OfType<ITextLineMarker> ();
+			return ((DocumentLine)line).Markers.OfType<ITextLineMarker> ();
 		}
 
 		IEnumerable<ITextSegmentMarker> ITextEditorImpl.GetTextSegmentMarkersAt (MonoDevelop.Core.Text.ISegment segment)
 		{
-			return TextEditor.Document.GetTextSegmentMarkersAt (new Mono.TextEditor.TextSegment (segment.Offset, segment.Length)).OfType<ITextSegmentMarker> ();
+			return TextEditor.Document.GetTextSegmentMarkersAt (new TextSegment (segment.Offset, segment.Length)).OfType<ITextSegmentMarker> ();
 		}
 
 		IEnumerable<ITextSegmentMarker> ITextEditorImpl.GetTextSegmentMarkersAt (int offset)
@@ -2789,7 +2789,7 @@ namespace MonoDevelop.SourceEditor
 				return MonoDevelop.Core.Text.TextSegment.FromBounds (range.Offset, range.EndOffset);
 			}
 			set {
-				TextEditor.SelectionRange = new Mono.TextEditor.TextSegment (value.Offset, value.Length);
+				TextEditor.SelectionRange = new TextSegment (value.Offset, value.Length);
 			}
 		}
 		
@@ -3101,7 +3101,7 @@ namespace MonoDevelop.SourceEditor
 		{
 			var handler = LineInserted;
 			if (handler != null)
-				handler (this, new MonoDevelop.Ide.Editor.LineEventArgs (new DocumentLineWrapper (e.Line)));
+				handler (this, new MonoDevelop.Ide.Editor.LineEventArgs (e.Line));
 		}
 
 		public event EventHandler<MonoDevelop.Ide.Editor.LineEventArgs> LineRemoved;
@@ -3110,7 +3110,7 @@ namespace MonoDevelop.SourceEditor
 		{
 			var handler = LineRemoved;
 			if (handler != null)
-				handler (this, new MonoDevelop.Ide.Editor.LineEventArgs (new DocumentLineWrapper (e.Line)));
+				handler (this, new MonoDevelop.Ide.Editor.LineEventArgs (e.Line));
 		}
 
 		public double ZoomLevel {
@@ -3138,13 +3138,13 @@ namespace MonoDevelop.SourceEditor
 
 		void TextViewMargin_LineShown (object sender, Mono.TextEditor.LineEventArgs e)
 		{
-			LineShown?.Invoke (this, new Ide.Editor.LineEventArgs (new DocumentLineWrapper (e.Line)));
+			LineShown?.Invoke (this, new Ide.Editor.LineEventArgs (e.Line));
 		}
 
 		public IEnumerable<IDocumentLine> VisibleLines {
 			get {
 				foreach (var v in TextEditor.TextViewMargin.CachedLine) {
-					yield return new DocumentLineWrapper (v);
+					yield return v;
 				}
 			}
 		}
@@ -3415,9 +3415,9 @@ namespace MonoDevelop.SourceEditor
 			switch (effect) {
 			case TextSegmentMarkerEffect.DottedLine:
 			case TextSegmentMarkerEffect.WavedLine:
-				return new GenericUnderlineMarker (new Mono.TextEditor.TextSegment (offset, length), effect);
+				return new GenericUnderlineMarker (new TextSegment (offset, length), effect);
 			case TextSegmentMarkerEffect.GrayOut:
-				return new GrayOutMarker (new Mono.TextEditor.TextSegment (offset, length));
+				return new GrayOutMarker (new TextSegment (offset, length));
 			default:
 				throw new ArgumentOutOfRangeException ();
 			}

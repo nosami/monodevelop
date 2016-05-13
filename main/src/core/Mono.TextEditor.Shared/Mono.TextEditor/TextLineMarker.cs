@@ -29,13 +29,13 @@ using Mono.TextEditor.Highlighting;
 
 namespace Mono.TextEditor
 {
-	public interface IExtendingTextLineMarker
+	interface IExtendingTextLineMarker
 	{
 		double GetLineHeight (MonoTextEditor editor);
 		void Draw (MonoTextEditor editor, Cairo.Context cr, int lineNr, Cairo.Rectangle lineArea);
 	}
 
-	public interface IActionTextLineMarker
+	interface IActionTextLineMarker
 	{
 		/// <returns>
 		/// true, if the mouse press was handled - false otherwise.
@@ -46,7 +46,7 @@ namespace Mono.TextEditor
 		void MouseHover (MonoTextEditor editor, MarginMouseEventArgs args, TextLineMarkerHoverResult result);
 	}
 
-	public class TextLineMarkerHoverResult
+	class TextLineMarkerHoverResult
 	{
 		bool isCursorSet;
 
@@ -74,7 +74,7 @@ namespace Mono.TextEditor
 		DrawsSelection = 1
 	}
 
-	public class LineMetrics
+	class LineMetrics
 	{
 		public DocumentLine LineSegment { get; internal set; }
 		public TextViewMargin.LayoutWrapper Layout { get; internal set; }
@@ -95,7 +95,7 @@ namespace Mono.TextEditor
 		public double LineYRenderStartPosition { get; internal set; }
 	}
 
-	public class EndOfLineMetrics
+	class EndOfLineMetrics
 	{
 		public DocumentLine LineSegment { get; internal set; }
 		public double TextRenderEndPosition { get; internal set; }
@@ -103,7 +103,7 @@ namespace Mono.TextEditor
 		public double LineYRenderStartPosition { get; internal set; }
 	}
 
-	public class TextLineMarker
+	class TextLineMarker
 	{
 		DocumentLine lineSegment;
 
@@ -140,7 +140,7 @@ namespace Mono.TextEditor
 		{
 		}
 
-		public virtual ChunkStyle GetStyle (ChunkStyle baseStyle)
+		internal virtual ChunkStyle GetStyle (ChunkStyle baseStyle)
 		{
 			return baseStyle;
 		}

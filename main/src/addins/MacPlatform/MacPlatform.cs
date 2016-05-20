@@ -141,6 +141,9 @@ namespace MonoDevelop.MacIntegration
 			System.Reflection.Assembly.LoadFrom (Path.Combine (path, "Xwt.XamMac.dll"));
 			var loaded = Xwt.Toolkit.Load (Xwt.ToolkitType.XamMac);
 
+			loaded.RegisterBackend<Xwt.Backends.IDialogBackend, ThemedMacDialogBackend> ();
+			loaded.RegisterBackend<Xwt.Backends.IWindowBackend, ThemedMacWindowBackend> ();
+
 			// We require Xwt.Mac to initialize MonoMac before we can execute any code using MonoMac
 			timer.Trace ("Installing App Event Handlers");
 			GlobalSetup ();
@@ -892,6 +895,24 @@ namespace MonoDevelop.MacIntegration
 			} else {
 				NSWorkspace.SharedWorkspace.ActivateFileViewer (selectFiles.Select ((f) => NSUrl.FromFilename (f)).ToArray ());
 			}
+		}
+	}
+
+	public class ThemedMacWindowBackend : Xwt.Mac.WindowBackend
+	{
+		public override void InitializeBackend (object frontend, Xwt.Backends.ApplicationContext context)
+		{
+			base.InitializeBackend (frontend, context);
+			IdeTheme.ApplyTheme (this);
+		}
+	}
+
+	public class ThemedMacDialogBackend : Xwt.Mac.DialogBackend
+	{
+		public override void InitializeBackend (object frontend, Xwt.Backends.ApplicationContext context)
+		{
+			base.InitializeBackend (frontend, context);
+			IdeTheme.ApplyTheme (this);
 		}
 	}
 }

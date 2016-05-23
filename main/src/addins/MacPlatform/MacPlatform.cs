@@ -143,6 +143,8 @@ namespace MonoDevelop.MacIntegration
 
 			loaded.RegisterBackend<Xwt.Backends.IDialogBackend, ThemedMacDialogBackend> ();
 			loaded.RegisterBackend<Xwt.Backends.IWindowBackend, ThemedMacWindowBackend> ();
+			loaded.RegisterBackend<Xwt.Backends.IAlertDialogBackend, ThemedMacAlertDialogBackend> ();
+
 
 			// We require Xwt.Mac to initialize MonoMac before we can execute any code using MonoMac
 			timer.Trace ("Installing App Event Handlers");
@@ -913,6 +915,15 @@ namespace MonoDevelop.MacIntegration
 		{
 			base.InitializeBackend (frontend, context);
 			IdeTheme.ApplyTheme (this);
+		}
+	}
+
+	public class ThemedMacAlertDialogBackend : Xwt.Mac.AlertDialogBackend
+	{
+		public override void Initialize (Xwt.Backends.ApplicationContext actx)
+		{
+			base.Initialize (actx);
+			IdeTheme.ApplyTheme (this.Window);
 		}
 	}
 }

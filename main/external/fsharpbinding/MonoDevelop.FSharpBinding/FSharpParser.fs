@@ -27,7 +27,7 @@ module ParsedDocument =
             let doc = new FSharpParsedDocument(fileName, location)
 
             doc.Tokens <- Tokens.tryGetTokens parseOptions.Content defines fileName
-
+          
             //Get all the symboluses now rather than in semantic highlighting
             LoggingService.LogDebug ("FSharpParser: Processing symbol uses on {0}", shortFilename)
 

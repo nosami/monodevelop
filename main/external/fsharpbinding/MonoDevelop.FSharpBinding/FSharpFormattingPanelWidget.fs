@@ -12,7 +12,7 @@ open Mono.Unix
 [<System.ComponentModel.ToolboxItem(true)>]
 type FSharpFormattingPolicyPanelWidget() =
     inherit Gtk.Bin()
-
+    let x = typedefof<string>
     let store = new ListStore (typedefof<string>, typedefof<FSharpFormattingSettings>)
     let mutable policy = FSharpFormattingPolicy()
     let mutable vbox2 : Gtk.VBox = null

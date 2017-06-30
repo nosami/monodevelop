@@ -16,12 +16,9 @@ open MonoDevelop.Projects
 
 type FakePad() =
     inherit MonoDevelop.Ide.Gui.PadContent()
-    let view = new FSharpConsoleView()
+    let mutable (view:FSharpConsoleView) = Unchecked.defaultof<_>
 
-    do view.InitialiseEvents()
-
-
-    member x.Run (baseDirectory, task, buildScript) =
+    member x.Run baseDirectory task buildScript =
         let fsiProcess =
             let startInfo =
                 new ProcessStartInfo
@@ -30,7 +27,7 @@ type FakePad() =
                     RedirectStandardInput = true, StandardErrorEncoding = Text.Encoding.UTF8,
                     StandardOutputEncoding = Text.Encoding.UTF8,
                     WorkingDirectory = baseDirectory)
-            view.WriteOutput(sprintf "FAKE task runner: Starting %s %s" buildScript task, false)
+            view.WriteOutput(sprintf "FAKE task runner: Starting %s %s" buildScript task)
             view.Clear()
 
             try
@@ -38,21 +35,25 @@ type FakePad() =
             with e ->
                 LoggingService.LogDebug (sprintf "FAKE task runner %s" (e.ToString()))
                 reraise()
-        do
-            Event.merge fsiProcess.OutputDataReceived fsiProcess.ErrorDataReceived
-            |> Event.filter (fun de -> de.Data <> null)
-            |> Event.add (fun de -> Runtime.RunInMainThread(fun _ -> view.WriteOutput (de.Data + "\n", false)) |> ignore)
 
-            fsiProcess.EnableRaisingEvents <- true
-            fsiProcess.BeginOutputReadLine()
-            fsiProcess.BeginErrorReadLine()
+        Event.merge fsiProcess.OutputDataReceived fsiProcess.ErrorDataReceived
+        |> Event.filter (fun de -> de.Data <> null)
+        |> Event.add (fun de -> Runtime.RunInMainThread(fun _ -> view.WriteOutput (de.Data + "\n")) |> ignore)
 
-    override x.Control = Control.op_Implicit view
+        fsiProcess.EnableRaisingEvents <- true
+        fsiProcess.BeginOutputReadLine()
+        fsiProcess.BeginErrorReadLine()
+
+    override x.Control = 
+        Control.op_Implicit view
+
     override x.Initialize(_container:MonoDevelop.Ide.Gui.IPadWindow) =
-        x.UpdateColors()
-        x.UpdateFont()
+        view <- new FSharpConsoleView()
+        view.InitialiseEvents()
+        x.UpdateColors view
+        x.UpdateFont view
 
-    member x.UpdateColors() =
+    member x.UpdateColors view =
         match view.Child with
         | :? Gtk.TextView as _v ->
             //let colourStyles = Mono.TextEditor.Highlighting.SyntaxModeService.GetColorStyle(MonoDevelop.Ide.IdeApp.Preferences.ColorScheme.Value)
@@ -71,13 +72,13 @@ type FakePad() =
             ()
         | _ -> ()
 
-    member x.UpdateFont() =
+    member x.UpdateFont view =
         let fontName = MonoDevelop.Ide.Fonts.FontService.MonospaceFont.Family
         let fontName = PropertyService.Get ("FSharpBinding.FsiFontName", fontName)
         LoggingService.logDebug "FAKE task runner: Loading font '%s'" fontName
 
         let font = Pango.FontDescription.FromString(fontName)
-        view.SetFont(font)
+        view.SetFont font
 
 type FakeSearchResult(solution: Solution, match', matchedString, rank, scriptPath) =
     inherit SearchResult(match', matchedString, rank)
@@ -113,7 +114,7 @@ type FakeSearchResult(solution: Solution, match', matchedString, rank, scriptPat
         pad |> Option.iter (fun p ->
             p.BringToFront()
             let padContent = p.Content :?> FakePad
-            padContent.Run (string solution.BaseDirectory, matchedString, scriptPath))
+            padContent.Run (string solution.BaseDirectory) matchedString scriptPath)
 
 type FakeSearchCategory() =
     inherit SearchCategory("FAKE", sortOrder = SearchCategory.FirstCategory)
